@@ -58,6 +58,8 @@ input[type=range]{width:100%;height:38px;accent-color:var(--red);margin:2px 0 0;
 #saved,#forms{display:flex;flex-direction:column;gap:6px;}
 .item{display:flex;gap:6px;}
 .item .load{flex:1;text-align:left;min-height:44px;font-size:16px;}
+.item .grip{flex:none;width:34px;padding:0;color:var(--muted);background:transparent;border-color:transparent;font-size:18px;line-height:1;cursor:grab;}
+.item .grip:active{cursor:grabbing;}
 .item .shr{flex:none;width:44px;padding:0;}
 textarea{font:inherit;font-weight:600;font-size:14px;width:100%;min-height:90px;padding:10px;border-radius:12px;border:2px solid var(--line);background:var(--field);color:var(--ink);resize:vertical;}
 .item .del{flex:none;width:44px;padding:0;color:var(--red);}
@@ -1252,10 +1254,41 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
         if(pl.name.toLowerCase()===cur) b.className="on";
         b.addEventListener("click",open); box.appendChild(b);
       } else {
-        var row=listRow(label,open,function(){ deletePlay(pl.name); },"Delete "+pl.name,function(){ sendCode({v:1,plays:[pl],forms:[]},"play “"+pl.name+"”"); });
+        var row=listRow(label,open,function(){ deletePlay(pl.name); },"Delete "+pl.name,function(){ sendCode({v:1,plays:[pl],forms:[]},"play “"+pl.name+"”"); },function(){ onMoveDown(pl); });
         if(pl.name.toLowerCase()===cur) row.firstChild.className="load on";
         box.appendChild(row);
       }
+    }
+    function sortedBucket(){
+      if(pmCat==="folders"&&pmFolder!==null) return list.filter(function(p){ return p.folder===pmFolder; });
+      if(pmCat==="run") return list.filter(function(p){ return p.cat==="run"&&!p.folder; });
+      if(pmCat==="pass") return list.filter(function(p){ return p.cat==="pass"&&!p.folder; });
+      return [];
+    }
+    function onMoveDown(pl){
+      var bucket=sortedBucket();
+      var idx=-1; for(var i=0;i<bucket.length;i++){ if(bucket[i].name===pl.name) idx=i; }
+      if(idx<0||idx>=bucket.length-1) return;
+      var a=bucket[idx], b=bucket[idx+1];
+      var t=a.sort_order; a.sort_order=b.sort_order; b.sort_order=t;
+      if(a.sort_order==null||b.sort_order==null){ rebuildBucketOrder(); }
+      persistOrder(); renderPMenu();
+    }
+    function rebuildBucketOrder(){
+      var bucket=sortedBucket();
+      for(var i=0;i<bucket.length;i++) bucket[i].sort_order=i+1;
+    }
+    function persistOrder(){
+      playCache.sort(function(a,b){
+        var fa=a.folder||"", fb=b.folder||"";
+        if(fa!==fb) return fa<fb?-1:1;
+        var sa=a.sort_order, sb=b.sort_order;
+        if(sa==null&&sb==null) return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;
+        if(sa==null) return 1; if(sb==null) return -1;
+        if(sa!==sb) return sa<sb?-1:1;
+        return (a.name||"").toLowerCase()<(b.name||"").toLowerCase()?-1:1;
+      });
+      dbSaveOrder(playCache);
     }
     if(pmCat==="folders"){
       if(pmFolder===null){
@@ -1285,11 +1318,15 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
         back.addEventListener("click",function(){ pmFolder=null; renderPMenu(); }); box.appendChild(back);
         var hd=document.createElement("p"); hd.className="pm-sub"; hd.style.fontSize="18px"; hd.textContent="\uD83D\uDCC1 "+pmFolder; box.appendChild(hd);
         list.forEach(function(pl,i){ if(pl.folder===pmFolder){ n++; add(pl,i,true); } });
+    var bucket=sortedBucket();
+    bucket.forEach(function(pl,i){ if(!pl.sort_order) pl.sort_order=i+1; });
         if(!n){ var m1=document.createElement("p"); m1.className="pm-sub"; m1.textContent="This folder is empty. Save a play and pick this folder in the save pop-up."; box.appendChild(m1); }
       }
       return;
     }
     list.forEach(function(pl,i){ if(pl.cat===pmCat){ n++; add(pl,i); } });
+    var bucket=sortedBucket();
+    bucket.forEach(function(pl,i){ if(!pl.sort_order) pl.sort_order=i+1; });
     if(!n){ var m=document.createElement("p"); m.className="pm-sub"; m.textContent="No "+pmCat+" plays saved yet. Draw one, name it, tap Save, and choose "+(pmCat==="run"?"Run":"Pass")+"."; box.appendChild(m); }
     if(!list.length){
       var h2=document.createElement("p"); h2.className="pm-sub"; h2.style.fontWeight="600";
@@ -1342,15 +1379,24 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   // ---- Supabase-backed play storage ----
   var playCache=[];
   function loadAll(){ return playCache; }
-  function rowToPlay(row){ return row.data; }
+
   function playToRow(p){
-    return { name:p.name||"", cat:p.cat||"pass", folder:p.folder||null, ball:p.ball||null, showd:p.showD!==false, data:p };
+    return { name:p.name||"", cat:p.cat||"pass", folder:p.folder||null, ball:p.ball||null, showd:p.showD!==false, sort_order:(p.sort_order==null?null:p.sort_order), data:p };
   }
+  function rowToPlay(row){ var p=row.data; if(row.sort_order!=null) p.sort_order=row.sort_order; return p; }
   async function initDB(){
     if(!window.sb){ return; }
-    var res=await window.sb.from("plays").select("*").order("name",{ascending:true});
+    var res=await window.sb.from("plays").select("*").order("folder",{ascending:true}).order("sort_order",{ascending:true}).order("name",{ascending:true});
     if(res.error){ return; }
     playCache=(res.data||[]).map(rowToPlay);
+  }
+  async function dbSaveOrder(plays){
+    if(!window.sb||!plays.length) return;
+    for(var i=0;i<plays.length;i++){
+      var p=plays[i];
+      var res=await window.sb.from("plays").update({sort_order:p.sort_order}).ilike("name",p.name).select("*").single();
+      if(res.error){ /* keep going — best-effort */ }
+    }
   }
   async function dbUpsert(p){
     if(!window.sb) return { error:"no client" };
@@ -1383,8 +1429,11 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   $("cdlg").addEventListener("click",function(e){ if(e.target===$("cdlg")) closeDelete(); });
   $("cdYes").addEventListener("click",function(){ var f=pendingDel; closeDelete(); if(f) f(); });
 
-  function listRow(name,onLoad,onDel,delLabel,onShare){
+  function listRow(name,onLoad,onDel,delLabel,onShare,onMoveDown){
     var row=document.createElement("div"); row.className="item";
+    var grip=document.createElement("button"); grip.type="button"; grip.className="grip"; grip.textContent="≡"; grip.setAttribute("aria-label","Move "+name+" down");
+    grip.addEventListener("click",function(){ if(onMoveDown) onMoveDown(); });
+    row.appendChild(grip);
     var b=document.createElement("button"); b.className="load"; b.textContent=name; b.addEventListener("click",onLoad);
     var kind=delLabel.indexOf("formation")>-1?"formation":"play";
     var d=document.createElement("button"); d.className="del"; d.textContent="✕"; d.setAttribute("aria-label",delLabel);
