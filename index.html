@@ -476,7 +476,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   };
 
   var ballId="O3", view="upright", present=false, prevTheme=null, blitzMode="random", covMode="random", simNote="", V0=150, DT=1/30;
-  var players=[], selId=null, mode="move", showD=true, showNames=true, speed=150, field="white", curTab="route";
+  var players=[], selId=null, mode="move", showD=false, showNames=true, speed=150, field="white", curTab="route";
   var dist=0, playing=false, finished=false, raf=0, lastT=0, drag=null, raw=[], ttlEl=null;
 
   function el(tag,attrs,parent){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
@@ -1420,7 +1420,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   }
   function cleanPlay(pl){
     if(!pl||typeof pl.name!=="string"||!Array.isArray(pl.players)) return null;
-    var out={name:pl.name.trim().slice(0,40),showD:pl.showD!==false,players:[]};
+    var out={name:pl.name.trim().slice(0,40),showD:pl.showD===true,players:[]};
     if(pl.cat==="run"||pl.cat==="pass") out.cat=pl.cat;
     if(/^O\d$/.test(String(pl.ball))) out.ball=String(pl.ball);
     if(typeof pl.folder==="string" && pl.folder.trim()) out.folder=pl.folder.trim().slice(0,30);
@@ -1540,7 +1540,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
 
   function renderSaved(){ if(!$("pmenu").hidden) renderPMenu(); }
   function loadPlay(pl){
-    showD=pl.showD!==false;
+    showD=pl.showD===true;
     players=pl.players.map(function(q){
       var p=mk({id:q.id,team:q.team,label:q.label,x:q.x,y:q.y,fill:q.fill,shape:q.shape,rc:q.rs&&q.rs.color});
       p.route=q.route||[]; p.rname=q.rname||""; p.mo=Math.max(0,Math.min(p.route.length,Math.round(+q.mo||0)));
@@ -1621,7 +1621,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   // Built-in plays: seeded once into Supabase if the table is empty, then
   // re-synced whenever SEED_VER changes. Bumping SEED_VER removes old built-in
   // plays and replaces them with the current set. User-created plays are kept.
-  var SEED_VER=5;
+  var SEED_VER=6;
   var SEED_KEY="flag515_seed_ver";
   // Names of every play that has ever shipped as a built-in seed (v1 or later).
   // On a seed version bump these are removed so deletions/renames reach everyone;
@@ -1638,7 +1638,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
     function build(name,cat,ball,assigns){
       var ps=defaultPlayers();
       assigns.forEach(function(a){ ps.forEach(function(q){ if(q.id===a[0]) applyRoute(q,a[1]); }); });
-      return {name:name,cat:cat,ball:ball,showD:true,seed:true,folder:"Traditional",players:ps.map(function(p){
+      return {name:name,cat:cat,ball:ball,showD:false,seed:true,folder:"Traditional",players:ps.map(function(p){
         return {id:p.id,team:p.team,label:p.label,x:p.x,y:p.y,fill:p.fill,shape:p.shape,route:p.route,mo:p.mo||0,rname:p.rname,rs:p.rs};
       })};
     }
