@@ -1289,7 +1289,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
       }
       return;
     }
-    list.forEach(function(pl,i){ if(pl.cat===pmCat && !pl.folder){ n++; add(pl,i); } });
+    list.forEach(function(pl,i){ if(pl.cat===pmCat){ n++; add(pl,i); } });
     if(!n){ var m=document.createElement("p"); m.className="pm-sub"; m.textContent="No "+pmCat+" plays saved yet. Draw one, name it, tap Save, and choose "+(pmCat==="run"?"Run":"Pass")+"."; box.appendChild(m); }
     if(!list.length){
       var h2=document.createElement("p"); h2.className="pm-sub"; h2.style.fontWeight="600";
@@ -1621,7 +1621,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   // Built-in plays: seeded once into Supabase if the table is empty, then
   // re-synced whenever SEED_VER changes. Bumping SEED_VER removes old built-in
   // plays and replaces them with the current set. User-created plays are kept.
-  var SEED_VER=3;
+  var SEED_VER=4;
   var SEED_KEY="flag515_seed_ver";
   // Names of every play that has ever shipped as a built-in seed (v1 or later).
   // On a seed version bump these are removed so deletions/renames reach everyone;
@@ -1638,7 +1638,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
     function build(name,cat,ball,assigns){
       var ps=defaultPlayers();
       assigns.forEach(function(a){ ps.forEach(function(q){ if(q.id===a[0]) applyRoute(q,a[1]); }); });
-      return {name:name,cat:cat,ball:ball,showD:true,seed:true,players:ps.map(function(p){
+      return {name:name,cat:cat,ball:ball,showD:true,seed:true,folder:"Traditional",players:ps.map(function(p){
         return {id:p.id,team:p.team,label:p.label,x:p.x,y:p.y,fill:p.fill,shape:p.shape,route:p.route,mo:p.mo||0,rname:p.rname,rs:p.rs};
       })};
     }
@@ -1670,6 +1670,8 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
         }
       });
       addFolder("Mike");
+      addFolder("Alex plays");
+      addFolder("Traditional");
     }catch(e){}
     // Re-sync built-in plays whenever SEED_VER changes. First visit (empty DB)
     // just inserts base. On later visits with a stale seed, drop the old built-in
