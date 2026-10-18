@@ -1776,6 +1776,43 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     l.forEach(function(p){ if(p.cat!=="run"&&p.cat!=="pass"){ p.cat="pass"; changed=true; } });
     if(changed) saveAll(l);
   })();
+  // first run: seed 16 ready-made plays so the playbook isn't empty
+  (function seedPlays(){
+    if(loadAll().length) return;
+    function applyRoute(p,rname){
+      var r=null; for(var i=0;i<ROUTES.length;i++) if(ROUTES[i].n===rname) r=ROUTES[i];
+      if(!r) return;
+      var org={x:p.x,y:p.y}, dir=org.x<=270?1:-1;
+      p.route=r.p.map(function(o){ return {x:clamp(org.x+dir*o[0]*YD,12,528),y:clamp(org.y-o[1]*YD,12,748)}; });
+      p.rname=r.n; p.mo=0;
+    }
+    function build(name,cat,ball,assigns){
+      var ps=defaultPlayers();
+      assigns.forEach(function(a){ ps.forEach(function(q){ if(q.id===a[0]) applyRoute(q,a[1]); }); });
+      return {name:name,cat:cat,ball:ball,showD:true,players:ps.map(function(p){
+        return {id:p.id,team:p.team,label:p.label,x:p.x,y:p.y,fill:p.fill,shape:p.shape,route:p.route,mo:p.mo||0,rname:p.rname,rs:p.rs};
+      })};
+    }
+    var seeds=[
+      ["HB Dive","run","O4",[["O4","Go 15"]]],
+      ["HB Sweep","run","O4",[["O4","Swing"]]],
+      ["HB Toss Left","run","O4",[["O4","Flat"]]],
+      ["HB Counter","run","O4",[["O4","Angle"]]],
+      ["QB Sneak","run","O3",[["O3","Go 15"]]],
+      ["HB Power","run","O4",[["O4","Go 15"]]],
+      ["HB Pitch","run","O4",[["O4","Swing"]]],
+      ["HB Blast","run","O4",[["O4","Angle"]]],
+      ["Slants","pass","O3",[["O1","Slant"],["O2","Slant"],["O4","Flat"]]],
+      ["Hitches","pass","O3",[["O1","Hitch 6"],["O2","Hitch 6"]]],
+      ["Go Routes","pass","O3",[["O1","Go 15"],["O2","Go 15"]]],
+      ["Out Routes","pass","O3",[["O1","Out 5"],["O2","Out 10"]]],
+      ["Curl Routes","pass","O3",[["O1","Curl 10"],["O2","Curl 12"]]],
+      ["Comebacks","pass","O3",[["O1","Comeback 12"],["O2","Comeback 15"]]],
+      ["Post Routes","pass","O3",[["O1","Post 12"],["O2","Post 12"]]],
+      ["Corner Routes","pass","O3",[["O1","Corner 12"],["O2","Corner 12"]]]
+    ];
+    saveAll(seeds.map(function(s){ return build(s[0],s[1],s[2],s[3]); }));
+  })();
   applyView();
   applyBase();
   renderForms();
