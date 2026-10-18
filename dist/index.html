@@ -85,26 +85,6 @@ button.sim{background:#1f4ed8;color:#fff;border-color:#1f4ed8;}
 #topcats button{min-height:52px;font-size:19px;color:#fff;}
 #topRun{background:#1e8a4c;border-color:#1e8a4c;}
 #topPass{background:#1f4ed8;border-color:#1f4ed8;}
-.teambtn{width:100%;min-height:46px;background:#14213d;color:#fff;border-color:#14213d;}
-#team{position:fixed;inset:0;z-index:9;background:var(--panel);color:var(--ink);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(30px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));}
-#team[hidden]{display:none;}
-.team-wrap{max-width:760px;margin:0 auto;}
-.team-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);padding:6px 0 12px;margin-bottom:8px;border-bottom:1px solid var(--line);}
-.team-head strong{font-family:"Arial Rounded MT Bold","Avenir Next Condensed","Arial Black",system-ui,sans-serif;font-weight:400;font-size:30px;}
-.team-head button{flex:none;min-height:50px;padding:0 26px;font-size:18px;background:var(--btnOn);color:var(--btnOnInk);border-color:var(--btnOn);}
-.tp-note{font-size:16px;color:var(--muted);line-height:1.4;margin:6px 0 12px;}
-.tp-msg{min-height:22px;font-size:17px;font-weight:700;margin:8px 0;line-height:1.3;}
-.tp-msg.good{color:#1f9d57;} .tp-msg.bad{color:#d9433b;}
-.tp-card{border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;}
-.tp-card h3{margin:0 0 6px;font-size:20px;}
-.tp-form{display:flex;flex-direction:column;gap:8px;margin:10px 0;}
-.tp-form label{font-size:15px;font-weight:700;color:var(--muted);}
-.tp-form input,.tp-form select{font:inherit;font-size:17px;font-weight:600;min-height:50px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--ink);padding:0 12px;width:100%;}
-.tp-group{margin:14px 0 6px;font-size:18px;font-weight:800;}
-.tp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:2px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:8px;}
-.tp-row .nm{flex:1 1 150px;font-weight:700;font-size:17px;line-height:1.2;}
-.tp-row .nm small{display:block;font-weight:600;font-size:13px;color:var(--muted);}
-.tp-row button{min-height:44px;padding:0 14px;font-size:15px;flex:none;}
 #topFold{background:#a8641a;border-color:#a8641a;}
 .catfold{display:flex;flex-direction:column;gap:6px;margin:2px 0 4px;}
 .catfold label{font-size:15px;font-weight:700;color:#55657f;}
@@ -209,7 +189,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   <meta property="og:image" content="https://bolt.new/static/og_default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-  <script type="module" crossorigin src="/assets/index-Dm83-Dok.js"></script>
+  <script type="module" crossorigin src="/assets/index-DDg7LZRx.js"></script>
 </head>
 <body>
 <div id="app">
@@ -226,7 +206,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
       <button id="topPass" type="button">Pass</button>
       <button id="topFold" type="button">Folders</button>
     </div>
-    <button id="teamBtn" class="teambtn" type="button">Team plays</button>
+
     <div class="saverow">
       <input type="text" id="pname" placeholder="Name this play" maxlength="40" autocomplete="off" aria-label="Play name">
       <button id="saveBtn" type="button">Save</button>
@@ -408,12 +388,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     </svg>
   </main>
   <div id="toast" hidden></div>
-  <div id="team" hidden role="dialog" aria-label="Team plays">
-    <div class="team-wrap">
-      <div class="team-head"><strong>Team plays</strong><button id="teamDone" type="button">Done</button></div>
-      <div id="teamBody"></div>
-    </div>
-  </div>
+
   <div id="catdlg" hidden role="dialog" aria-labelledby="catMsg">
     <div class="pm-card">
       <p id="catMsg"></p>
@@ -1276,7 +1251,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
         if(pl.name.toLowerCase()===cur) b.className="on";
         b.addEventListener("click",open); box.appendChild(b);
       } else {
-        var row=listRow(label,open,function(){ var l=loadAll(); l.splice(i,1); saveAll(l); renderSaved(); },"Delete "+pl.name,function(){ sendCode({v:1,plays:[pl],forms:[]},"play “"+pl.name+"”"); });
+        var row=listRow(label,open,function(){ deletePlay(pl.name); },"Delete "+pl.name,function(){ sendCode({v:1,plays:[pl],forms:[]},"play “"+pl.name+"”"); });
         if(pl.name.toLowerCase()===cur) row.firstChild.className="load on";
         box.appendChild(row);
       }
@@ -1340,22 +1315,18 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   $("pmenu").addEventListener("click",function(e){ if(e.target===$("pmenu")) $("pmenu").hidden=true; });
 
   // ---------- storage ----------
+  // Formations and folders stay in localStorage (local-only, not shared).
+  // Plays live in Supabase (global, shared). loadAll() returns an in-memory
+  // cache that is hydrated from Supabase at startup by initDB().
   function readList(key){ try{ var r=localStorage.getItem(key); var v=r?JSON.parse(r):[]; return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function writeList(key,l){
-    try{
-      var cur=localStorage.getItem(key);
-      if(cur){
-        try{ var v=JSON.parse(cur); if(Array.isArray(v)&&v.length) localStorage.setItem(key+"_prev",cur); }   // last good copy
-        catch(e){ localStorage.setItem(key+"_unreadable",cur); }                                              // never destroy data we can't read
-      }
-      localStorage.setItem(key,JSON.stringify(l)); return true;
-    }catch(e){ return false; }
+    try{ localStorage.setItem(key,JSON.stringify(l)); return true; }catch(e){ return false; }
   }
   var FOLD="flag515_folders_v1";
   function loadFolders(){ return readList(FOLD).filter(function(f){ return typeof f==="string"&&f.trim(); }); }
   function saveFolders(l){ return writeList(FOLD,l); }
   function foldersAll(){
-    var s={}; loadFolders().forEach(function(f){ s[f]=1; }); loadAll().forEach(function(p){ if(p.folder) s[p.folder]=1; });
+    var s={}; loadFolders().forEach(function(f){ s[f]=1; }); playCache.forEach(function(p){ if(p.folder) s[p.folder]=1; });
     return Object.keys(s).sort(function(a,b){ return a.toLowerCase()<b.toLowerCase()?-1:1; });
   }
   function addFolder(name){
@@ -1366,8 +1337,34 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   }
   function loadForms(){ return readList(FS); }
   function saveForms(l){ return writeList(FS,l); }
-  function loadAll(){ return readList(PS); }
-  function saveAll(l){ return writeList(PS,l); }
+
+  // ---- Supabase-backed play storage ----
+  var playCache=[];
+  function loadAll(){ return playCache; }
+  function rowToPlay(row){ return row.data; }
+  function playToRow(p){
+    return { name:p.name||"", cat:p.cat||"pass", folder:p.folder||null, ball:p.ball||null, showd:p.showD!==false, data:p };
+  }
+  async function initDB(){
+    if(!window.sb){ return; }
+    var res=await window.sb.from("plays").select("*").order("name",{ascending:true});
+    if(res.error){ return; }
+    playCache=(res.data||[]).map(rowToPlay);
+  }
+  async function dbUpsert(p){
+    if(!window.sb) return { error:"no client" };
+    return await window.sb.from("plays").upsert(playToRow(p),{ onConflict:"name_lower" }).select("*").single();
+  }
+  async function dbDelete(name){
+    if(!window.sb) return { error:"no client" };
+    return await window.sb.from("plays").delete().ilike("name",name);
+  }
+  async function dbInsertMany(plays){
+    if(!window.sb||!plays.length) return;
+    var rows=plays.map(playToRow);
+    var res=await window.sb.from("plays").insert(rows);
+    return res;
+  }
 
   function saveFormation(name){
     var list=loadForms();
@@ -1501,7 +1498,9 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     (Array.isArray(data.plays)?data.plays:[]).slice(0,200).forEach(function(raw){ var c=cleanPlay(raw); if(c){ if(!c.cat) c.cat="pass"; mergeInto(plays,c,cleanPlay,sp); } });
     (Array.isArray(data.forms)?data.forms:[]).slice(0,50).forEach(function(raw){ var c=cleanForm(raw); if(c) mergeInto(forms,c,cleanForm,sf); });
     if(!sp.added && !sf.added && !sp.updated){ setStatus(sp.same||sf.same?"You already have everything in that code.":(restoring?"There's no earlier copy to restore.":"No plays found in that code.")); return; }
-    if(!saveAll(plays) || !saveForms(forms)){ setStatus("Could not save in this browser."); return; }
+    if(!saveForms(forms)){ setStatus("Could not save in this browser."); return; }
+    // Persist new/updated plays to Supabase (cache already updated by mergeInto)
+    if(sp.added||sp.updated){ dbUpsertBatch(plays); }
     renderForms(); $("importBox").value="";
     var parts=[];
     if(sp.added){
@@ -1581,18 +1580,29 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   $("catdlg").addEventListener("click",function(e){ if(e.target===$("catdlg")) closeCat(); });
 
   function doSave(name,cat,folder){
-    var list=loadAll();
     var rec={name:name,cat:cat,ball:ballId,showD:showD,players:players.map(function(p){
       return {id:p.id,team:p.team,label:p.label,x:p.x,y:p.y,fill:p.fill,shape:p.shape,route:p.route,mo:p.mo||0,rname:p.rname,rs:p.rs};
     })};
     if(folder) rec.folder=folder;
+    var list=loadAll();
     var found=-1; list.forEach(function(p,i){ if(p.name.toLowerCase()===name.toLowerCase()) found=i; });
     if(found>=0) list[found]=rec; else list.push(rec);
-    if(saveAll(list)){
+    dbUpsert(rec).then(function(res){
+      if(res.error){ flash("Could not save — check your connection"); return; }
       curFolder=folder||"";
       renderSaved(); flash("Saved “"+name+"” in "+(folder?folder+" (":"")+(cat==="run"?"Run":"Pass")+(folder?")":""));
       var sb=$("saveBtn"); sb.textContent="Saved ✓"; setTimeout(function(){ sb.textContent="Save"; },1600);
-    } else flash("Could not save in this browser");
+    });
+  }
+  function deletePlay(name){
+    var list=loadAll();
+    var idx=-1; list.forEach(function(p,i){ if(p.name.toLowerCase()===name.toLowerCase()) idx=i; });
+    if(idx<0) return;
+    list.splice(idx,1);
+    dbDelete(name).then(function(){ renderSaved(); });
+  }
+  async function dbUpsertBatch(plays){
+    for(var i=0;i<plays.length;i++){ await dbUpsert(plays[i]); }
   }
   $("saveBtn").addEventListener("click",function(){
     var name=$("pname").value.trim();
@@ -1605,188 +1615,18 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   $("pname").addEventListener("input",setTitle);
 
   // ---------- start ----------
-  // ---------- Team plays: a shared library on the Playbook Hub server ----------
-  var TKEY="flag515_team_v1";
-  var TS=(function(){ try{ var r=JSON.parse(localStorage.getItem(TKEY)||"{}"); return {server:r.server||"",token:r.token||"",coach:r.coach||null,team:r.team||null,name:r.name||""}; }catch(e){ return {server:"",token:"",coach:null,team:null,name:""}; } })();
-  function tsSave(){ try{ localStorage.setItem(TKEY,JSON.stringify(TS)); }catch(e){} }
-  var TV={mode:"loading",plays:[],rev:-1,msg:"",good:false,timer:0,busy:false};
-  function defaultServer(){ return /^https?:$/.test(location.protocol)?location.origin:""; }
-  function tbase(){ return (TS.server||defaultServer()).replace(/\/+$/,""); }
-  function tslug(t){ return String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40)||"play"; }
-  // Bolt version: the same /api calls as the hub server, answered by the hub_* functions in the Bolt database (bolt/schema.sql).
-  // window.HUB_DB = {url, key} is filled in from Bolt's settings by the small module script at the end of the page.
-  function tapi(method,path,body,noauth){
-    var db=window.HUB_DB||{}, m=/^\/api\/plays\/([^?]+)$/.exec(path), q=/[?&]rev=(-?\d+)/.exec(path), fn="", args={};
-    if(path==="/api/health") fn="hub_health";
-    else if(path==="/api/join"){ fn="hub_join"; args={p_code:body.code,p_name:body.name,p_pin:body.pin}; }
-    else if(path==="/api/me") fn="hub_me";
-    else if(path==="/api/logout") fn="hub_logout";
-    else if(/^\/api\/plays(\?|$)/.test(path)){ fn="hub_plays"; args={p_rev:q?+q[1]:null}; }
-    else if(m&&method==="PUT"){ fn="hub_put_play"; args={p_id:decodeURIComponent(m[1]),p_data:body}; }
-    else if(m&&method==="DELETE"){ fn="hub_delete_play"; args={p_id:decodeURIComponent(m[1])}; }
-    if(fn!=="hub_health"&&fn!=="hub_join") args.p_token=TS.token||"";
-    if(!fn||!db.url||!db.key) return Promise.reject(Object.assign(new Error("Team sharing isn't set up yet."),{status:0}));
-    return fetch(db.url.replace(/\/+$/,"")+"/rest/v1/rpc/"+fn,{method:"POST",headers:{"Content-Type":"application/json",apikey:db.key,Authorization:"Bearer "+db.key},body:JSON.stringify(args)}).then(function(r){
-      return r.json().catch(function(){ return {}; }).then(function(j){
-        if(!r.ok){ var e=new Error("Something went wrong."); e.status=r.status; throw e; }
-        if(j&&j.error){ var e2=new Error(j.error); e2.status=j.status||400; throw e2; }
-        return j;
-      });
-    });
-  }
-  function tmsg(t,good){ TV.msg=t; TV.good=!!good; var e=$("tpMsg"); if(e){ e.textContent=t; e.className="tp-msg"+(t?(good?" good":" bad"):""); } }
-  function openTeam(){
-    $("team").hidden=false; $("team").scrollTop=0; TV.msg="";
-    clearInterval(TV.timer); TV.timer=setInterval(function(){ if(!$("team").hidden && TV.mode==="library" && !TV.busy) refreshPlays(true); },15000);
-    teamInit();
-  }
-  function closeTeam(){ $("team").hidden=true; clearInterval(TV.timer); }
-  function teamInit(){
-    TV.mode="loading"; renderTeam();
-    if(TS.token){
-      tapi("GET","/api/me").then(function(j){ TS.coach=j.coach; TS.team=j.team; tsSave(); TV.mode="library"; TV.rev=-1; refreshPlays(false); })
-        .catch(function(e){ if(e.status===401){ TS.token=""; TS.coach=null; tsSave(); joinOrConnect(); } else { TV.mode="connect"; renderTeam(); tmsg("I couldn't reach the team server. Check your internet, or the address below.",false); } });
-    } else joinOrConnect();
-  }
-  function joinOrConnect(){
-    tapi("GET","/api/health",null,true).then(function(){ TV.mode="join"; renderTeam(); }).catch(function(){ TV.mode="connect"; renderTeam(); });
-  }
-  function refreshPlays(quiet){
-    tapi("GET","/api/plays"+(TV.rev>=0?"?rev="+TV.rev:"")).then(function(j){
-      var changed=!j.same; if(changed) TV.plays=j.plays; TV.rev=j.rev;
-      if(changed || !quiet) renderTeam();
-    }).catch(function(e){
-      if(e.status===401){ TS.token=""; tsSave(); joinOrConnect(); }
-      else if(!quiet){ renderTeam(); tmsg("Couldn't refresh. Check your internet.",false); }
-    });
-  }
-  function connectHtml(){
-    return "<div class='tp-card'><h3>Connect to your team</h3><p class='tp-note'>Type the web address your team uses for the playbook. Ask your head coach if you're not sure. Opening the playbook from that address connects you automatically.</p>"+
-      "<div class='tp-form'><label for='tpServer'>Team address</label><input id='tpServer' type='url' inputmode='url' autocapitalize='none' autocorrect='off' spellcheck='false' placeholder='https://playbook.yourteam.com' value=\""+esc(TS.server||"")+"\"></div>"+
-      "<div class='row' style='margin-top:6px'><button class='btn primary' id='tpConnect' type='button'>Connect</button></div><p class='tp-msg' id='tpMsg' role='status'></p></div>";
-  }
-  function joinHtml(){
-    return "<div class='tp-card'><h3>Join your team</h3><p class='tp-note'>Get the team code from your head coach. First time here? Pick your name and a PIN you'll remember. On another device, use the same name and PIN to get your plays back.</p>"+
-      "<div class='tp-form'><label for='tpCode'>Team code</label><input id='tpCode' type='text' autocapitalize='none' autocorrect='off' spellcheck='false' autocomplete='off'>"+
-      "<label for='tpName'>Your name (this is what other coaches see)</label><input id='tpName' type='text' maxlength='24' autocomplete='off' value=\""+esc(TS.name||"")+"\">"+
-      "<label for='tpPin'>Your PIN (4 to 12 letters or numbers)</label><input id='tpPin' type='password' maxlength='12' autocomplete='off'></div>"+
-      "<div class='row' style='margin-top:6px'><button class='btn primary' id='tpJoin' type='button'>Join team</button></div><p class='tp-msg' id='tpMsg' role='status'></p></div>";
-  }
-  function myFolders(){ var s={},n=0; loadAll().forEach(function(p){ n++; if(p.folder) s[p.folder]=(s[p.folder]||0)+1; }); return {all:n,by:s}; }
-  function libraryHtml(){
-    var me=TS.coach, f=myFolders(), h="";
-    h+="<p class='tp-note'>You're signed in as <b>"+esc(me.name)+"</b> on <b>"+esc(TS.team.name)+"</b>. <button class='btn small' id='tpOut' type='button' style='flex:none;min-height:36px;font-size:14px;padding:0 10px'>Sign out</button></p>";
-    h+="<p class='tp-msg"+(TV.msg?(TV.good?" good":" bad"):"")+"' id='tpMsg' role='status'>"+esc(TV.msg)+"</p>";
-    h+="<div class='tp-card'><h3>Share my plays</h3><p class='tp-note'>Your saved plays stay on this device. Share the ones you want other coaches to see. Sharing again updates them.</p><div class='tp-form'><label for='tpWhich'>Which plays?</label><select id='tpWhich'><option value=''>All my plays ("+f.all+")</option>";
-    Object.keys(f.by).sort().forEach(function(k){ h+="<option value=\""+esc(k)+"\">Folder: "+esc(k)+" ("+f.by[k]+")</option>"; });
-    h+="</select></div><div class='row' style='margin-top:4px'><button class='btn primary' id='tpShare' type='button'"+(f.all?"":" disabled")+">Share with the team</button></div></div>";
-    h+="<div class='row' style='margin:0 0 4px;align-items:center'><h3 style='margin:0;font-size:22px;flex:1'>Team library</h3><button class='btn small' id='tpRefresh' type='button'>Refresh</button></div>";
-    var groups={}; TV.plays.forEach(function(p){ (groups[p.owner.id]=groups[p.owner.id]||{owner:p.owner,items:[]}).items.push(p); });
-    var gl=Object.keys(groups).map(function(k){ return groups[k]; }).sort(function(a,b){ return a.owner.id===me.id?-1:(b.owner.id===me.id?1:a.owner.name.localeCompare(b.owner.name)); });
-    if(!gl.length) h+="<p class='tp-note'>No plays are shared yet. Share yours above, and other coaches' plays will show up here.</p>";
-    gl.forEach(function(g){
-      var mine=g.owner.id===me.id;
-      h+="<div class='tp-group'>"+esc(g.owner.name)+(mine?" (you)":"")+" · "+g.items.length+(g.items.length===1?" play":" plays")+"</div>";
-      g.items.sort(function(a,b){ return a.data.name.localeCompare(b.data.name); }).forEach(function(p){
-        var d=p.data;
-        h+="<div class='tp-row'><div class='nm'>"+esc(d.name)+"<small>"+(d.cat==="run"?"Run":(d.cat==="pass"?"Pass":"Play"))+(d.folder?" · "+esc(d.folder):"")+"</small></div>"+
-          "<button class='btn small' data-act='open' data-id='"+esc(p.id)+"' type='button'>Open</button>"+
-          (mine?"<button class='btn small' data-act='remove' data-id='"+esc(p.id)+"' type='button'>Remove</button>":"<button class='btn small' data-act='copy' data-id='"+esc(p.id)+"' type='button'>Copy to mine</button>")+"</div>";
-      });
-    });
-    return h;
-  }
-  function renderTeam(){
-    var h;
-    if(TV.mode==="loading") h="<p class='tp-note'>Connecting…</p>";
-    else if(TV.mode==="connect") h=connectHtml();
-    else if(TV.mode==="join") h=joinHtml();
-    else h=libraryHtml();
-    $("teamBody").innerHTML=h;
-    if(TV.msg && TV.mode!=="library"){ tmsg(TV.msg,TV.good); }
-  }
-  function findTP(id){ var r=null; TV.plays.forEach(function(p){ if(p.id===id) r=p; }); return r; }
-  function doJoin(){
-    var code=$("tpCode").value.trim(), name=$("tpName").value.trim(), pin=$("tpPin").value;
-    if(!code||!name||!pin){ tmsg("Fill in all three boxes.",false); return; }
-    tmsg("Joining…",true);
-    tapi("POST","/api/join",{code:code,name:name,pin:pin},true).then(function(j){
-      TS.token=j.token; TS.coach=j.coach; TS.team=j.team; TS.name=j.coach.name; tsSave(); TV.mode="library"; TV.rev=-1; TV.msg="Welcome, "+j.coach.name+"!"; TV.good=true; refreshPlays(false);
-    }).catch(function(e){ tmsg(e.message,false); });
-  }
-  function doConnect(){
-    var v=$("tpServer").value.trim().replace(/\/+$/,"");
-    if(!/^https?:\/\/.+/i.test(v)){ tmsg("The address should start with https://",false); return; }
-    TS.server=v; tsSave(); tmsg("Connecting…",true);
-    tapi("GET","/api/health",null,true).then(function(){ TV.msg=""; joinOrConnect(); }).catch(function(){ tmsg("I couldn't reach that address.",false); });
-  }
-  function doShare(){
-    var which=$("tpWhich").value, list=loadAll().filter(function(p){ return !which||p.folder===which; });
-    if(!list.length){ tmsg("Nothing to share yet.",false); return; }
-    TV.busy=true; $("tpShare").disabled=true; var i=0, ok=0, last="";
-    (function next(){
-      if(i>=list.length){
-        TV.busy=false; TV.rev=-1;
-        TV.msg=(ok===list.length?"Shared ":"Shared ")+ok+" of "+list.length+(list.length===1?" play":" plays")+(last?". "+last:"."); TV.good=ok===list.length;
-        refreshPlays(false); return;
-      }
-      var pl=list[i++]; tmsg("Sharing "+i+" of "+list.length+"…",true);
-      var nm=pl.name.trim().slice(0,40);
-      tapi("PUT","/api/plays/"+TS.coach.id+"-"+tslug(nm),{name:nm,cat:pl.cat,folder:pl.folder||"",ball:pl.ball,showD:pl.showD,players:pl.players}).then(function(){ ok++; next(); }).catch(function(e){ last=e.message; next(); });
-    })();
-  }
-  function copyToMine(p){
-    var c=cleanPlay(p.data); if(!c) return;
-    if(!c.folder) c.folder=p.owner.name+" plays";
-    addFolder(c.folder);
-    var plays=loadAll(), st={added:0,same:0,cats:{run:0,pass:0},folders:{}};
-    mergeInto(plays,c,cleanPlay,st);
-    if(st.added){ saveAll(plays); renderSaved(); tmsg("Copied “"+c.name+"” into the folder “"+c.folder+"” on this device.",true); }
-    else tmsg("You already have “"+c.name+"” from "+p.owner.name+".",true);
-  }
-  $("teamBody").addEventListener("click",function(e){
-    var b=e.target.closest("button"); if(!b) return;
-    var id=b.id, act=b.getAttribute("data-act");
-    if(id==="tpConnect") doConnect();
-    else if(id==="tpJoin") doJoin();
-    else if(id==="tpShare") doShare();
-    else if(id==="tpRefresh"){ TV.rev=-1; refreshPlays(false); }
-    else if(id==="tpOut"){ tapi("POST","/api/logout").catch(function(){}); TS.token=""; TS.coach=null; tsSave(); TV.msg=""; joinOrConnect(); }
-    else if(act){
-      var p=findTP(b.getAttribute("data-id")); if(!p) return;
-      if(act==="open"){ var c=cleanPlay(p.data); if(c){ loadPlay(c); closeTeam(); flash("Opened “"+c.name+"” from "+p.owner.name+". Tap Save to keep a copy."); } }
-      else if(act==="copy") copyToMine(p);
-      else if(act==="remove") askDelete("Remove “"+p.data.name+"” from the team library? Your own copy on this device stays.",function(){
-        tapi("DELETE","/api/plays/"+p.id).then(function(){ TV.rev=-1; TV.msg="Removed from the team library."; TV.good=true; refreshPlays(false); }).catch(function(er){ tmsg(er.message,false); });
-      },"Remove");
-    }
-  });
-  $("teamBody").addEventListener("keydown",function(e){
-    if(e.key!=="Enter") return;
-    if(e.target.id==="tpServer"){ e.preventDefault(); doConnect(); }
-    else if(e.target.id==="tpCode"||e.target.id==="tpName"||e.target.id==="tpPin"){ e.preventDefault(); doJoin(); }
-  });
-  $("teamBtn").addEventListener("click",openTeam);
-  $("teamDone").addEventListener("click",closeTeam);
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("/sw.js").catch(function(){});
 
-  // plays saved before Run/Pass existed were all passes: file them under Pass
-  (function(){
-    var l=loadAll(), changed=false;
-    l.forEach(function(p){ if(p.cat!=="run"&&p.cat!=="pass"){ p.cat="pass"; changed=true; } });
-    if(changed) saveAll(l);
-  })();
-  // Built-in plays: seeded once, then re-synced whenever SEED_VER changes.
-  // Bumping SEED_VER removes the old built-in plays and replaces them with the
-  // current set, so every device picks up deletions/changes. User-created plays
-  // (seed !== true) are never touched.
-  var SEED_VER=2;
+  // Built-in plays: seeded once into Supabase if the table is empty, then
+  // re-synced whenever SEED_VER changes. Bumping SEED_VER removes old built-in
+  // plays and replaces them with the current set. User-created plays are kept.
+  var SEED_VER=3;
   var SEED_KEY="flag515_seed_ver";
   // Names of every play that has ever shipped as a built-in seed (v1 or later).
   // On a seed version bump these are removed so deletions/renames reach everyone;
   // user-created plays with other names are never touched.
   var SEED_NAMES={"HB Dive":1,"HB Sweep":1,"HB Toss Left":1,"HB Counter":1,"QB Sneak":1,"HB Power":1,"HB Pitch":1,"HB Blast":1,"Slants":1,"Hitches":1,"Go Routes":1,"Out Routes":1,"Curl Routes":1,"Comebacks":1,"Post Routes":1,"Corner Routes":1,"HB Stretch Right":1,"Penguin":1,"HB Stretch Left":1,"Slant Read HB Right":1,"Slant Read HB Left":1,"X Motion":1,"X Motion Run":1,"HB Option":1,"Pitch right option":1,"Pitch left option":1,"Slant Wheel":1,"Y Cross Go":1,"Center Deep Mesh":1,"Pony Tight Switch X Wheel":1};
-  (function seedPlays(){
+  async function seedPlays(){
     function applyRoute(p,rname){
       var r=null; for(var i=0;i<ROUTES.length;i++) if(ROUTES[i].n===rname) r=ROUTES[i];
       if(!r) return;
@@ -1830,28 +1670,43 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
       });
       addFolder("Mike");
     }catch(e){}
-    // Re-sync built-in plays whenever SEED_VER changes. First visit (empty list)
-    // just saves base. On later visits with a stale seed, drop the old built-in
-    // plays and merge the current set back in; user-created plays are kept.
+    // Re-sync built-in plays whenever SEED_VER changes. First visit (empty DB)
+    // just inserts base. On later visits with a stale seed, drop the old built-in
+    // plays from Supabase and insert the current set; user-created plays are kept.
     var existing=loadAll();
     if(!existing.length){
-      saveAll(base);
+      playCache=base.slice();
+      await dbInsertMany(base);
       try{ localStorage.setItem(SEED_KEY,String(SEED_VER)); }catch(e){}
     } else {
       var prev=0; try{ prev=+(localStorage.getItem(SEED_KEY)||0); }catch(e){}
       if(prev!==SEED_VER){
+        // Delete old seed plays from Supabase by name
+        for(var si=0;si<existing.length;si++){
+          var p=existing[si];
+          if(p.seed||SEED_NAMES[p.name]){ await dbDelete(p.name); }
+        }
+        // Merge current seeds with user plays (in cache)
         var kept=existing.filter(function(p){ return !p.seed && !SEED_NAMES[p.name]; });
         var st={added:0,same:0,cats:{run:0,pass:0},folders:{}};
         base.forEach(function(b){ mergeInto(kept,b,cleanPlay,st); });
-        saveAll(kept);
+        playCache=kept;
+        // Insert the new seed plays into Supabase
+        var toInsert=kept.filter(function(p){ return p.seed; });
+        if(toInsert.length) await dbInsertMany(toInsert);
         try{ localStorage.setItem(SEED_KEY,String(SEED_VER)); }catch(e){}
       }
     }
+  }
+  // Async startup: load plays from Supabase, seed if needed, then render
+  (async function(){
+    await initDB();
+    await seedPlays();
+    applyView();
+    applyBase();
+    renderForms();
+    renderSaved();
   })();
-  applyView();
-  applyBase();
-  renderForms();
-  renderSaved();
 })();
 </script>
 </body>
