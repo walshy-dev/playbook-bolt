@@ -1670,7 +1670,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
   // Built-in plays: seeded once into Supabase if the table is empty, then
   // re-synced whenever SEED_VER changes. Bumping SEED_VER removes old built-in
   // plays and replaces them with the current set. User-created plays are kept.
-  var SEED_VER=6;
+  var SEED_VER=7;
   var SEED_KEY="flag515_seed_ver";
   // Names of every play that has ever shipped as a built-in seed (v1 or later).
   // On a seed version bump these are removed so deletions/renames reach everyone;
@@ -1717,7 +1717,7 @@ window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.en
         if(c){
           if(!c.cat) c.cat="pass";
           if(p.folder==="Alex plays") c.folder="Alex plays"; else c.folder="Mike";
-          c.seed=true;
+          c.seed=true; c.showD=false;
           mergeInto(base,c,cleanPlay,{added:0,same:0,cats:{run:0,pass:0},folders:{}});
         }
       });
