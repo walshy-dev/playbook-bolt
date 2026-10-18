@@ -433,7 +433,9 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
   </div>
 </div>
 
-<script>
+<script type="module">
+import { createClient } from '@supabase/supabase-js';
+window.sb = createClient(import.meta.env.VITE_SUPABASE_URL || '', import.meta.env.VITE_SUPABASE_ANON_KEY || '');
 (function(){
   var NS="http://www.w3.org/2000/svg";
   function $(id){ return document.getElementById(id); }
@@ -1707,13 +1709,6 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     renderSaved();
   })();
 })();
-</script>
-<script type="module">
-  import { createClient } from '@supabase/supabase-js';
-  window.sb = createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
 </script>
 </body>
 </html>
