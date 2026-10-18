@@ -1776,9 +1776,17 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     l.forEach(function(p){ if(p.cat!=="run"&&p.cat!=="pass"){ p.cat="pass"; changed=true; } });
     if(changed) saveAll(l);
   })();
-  // first run: seed 16 ready-made plays so the playbook isn't empty
+  // Built-in plays: seeded once, then re-synced whenever SEED_VER changes.
+  // Bumping SEED_VER removes the old built-in plays and replaces them with the
+  // current set, so every device picks up deletions/changes. User-created plays
+  // (seed !== true) are never touched.
+  var SEED_VER=2;
+  var SEED_KEY="flag515_seed_ver";
+  // Names of every play that has ever shipped as a built-in seed (v1 or later).
+  // On a seed version bump these are removed so deletions/renames reach everyone;
+  // user-created plays with other names are never touched.
+  var SEED_NAMES={"HB Dive":1,"HB Sweep":1,"HB Toss Left":1,"HB Counter":1,"QB Sneak":1,"HB Power":1,"HB Pitch":1,"HB Blast":1,"Slants":1,"Hitches":1,"Go Routes":1,"Out Routes":1,"Curl Routes":1,"Comebacks":1,"Post Routes":1,"Corner Routes":1,"HB Stretch Right":1,"Penguin":1,"HB Stretch Left":1,"Slant Read HB Right":1,"Slant Read HB Left":1,"X Motion":1,"X Motion Run":1,"HB Option":1,"Pitch right option":1,"Pitch left option":1,"Slant Wheel":1,"Y Cross Go":1,"Center Deep Mesh":1,"Pony Tight Switch X Wheel":1};
   (function seedPlays(){
-    if(loadAll().length) return;
     function applyRoute(p,rname){
       var r=null; for(var i=0;i<ROUTES.length;i++) if(ROUTES[i].n===rname) r=ROUTES[i];
       if(!r) return;
@@ -1789,7 +1797,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
     function build(name,cat,ball,assigns){
       var ps=defaultPlayers();
       assigns.forEach(function(a){ ps.forEach(function(q){ if(q.id===a[0]) applyRoute(q,a[1]); }); });
-      return {name:name,cat:cat,ball:ball,showD:true,players:ps.map(function(p){
+      return {name:name,cat:cat,ball:ball,showD:true,seed:true,players:ps.map(function(p){
         return {id:p.id,team:p.team,label:p.label,x:p.x,y:p.y,fill:p.fill,shape:p.shape,route:p.route,mo:p.mo||0,rname:p.rname,rs:p.rs};
       })};
     }
@@ -1797,11 +1805,7 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
       ["HB Dive","run","O4",[["O4","Go 15"]]],
       ["HB Sweep","run","O4",[["O4","Swing"]]],
       ["HB Toss Left","run","O4",[["O4","Flat"]]],
-      ["HB Counter","run","O4",[["O4","Angle"]]],
-      ["QB Sneak","run","O3",[["O3","Go 15"]]],
-      ["HB Power","run","O4",[["O4","Go 15"]]],
       ["HB Pitch","run","O4",[["O4","Swing"]]],
-      ["HB Blast","run","O4",[["O4","Angle"]]],
       ["Slants","pass","O3",[["O1","Slant"],["O2","Slant"],["O4","Flat"]]],
       ["Hitches","pass","O3",[["O1","Hitch 6"],["O2","Hitch 6"]]],
       ["Go Routes","pass","O3",[["O1","Go 15"],["O2","Go 15"]]],
@@ -1820,13 +1824,29 @@ html.present #pbar{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:1
         var c=cleanPlay(raw);
         if(c){
           if(!c.cat) c.cat="pass";
-          c.folder="Mike";
+          c.folder="Mike"; c.seed=true;
           mergeInto(base,c,cleanPlay,{added:0,same:0,cats:{run:0,pass:0},folders:{}});
         }
       });
       addFolder("Mike");
     }catch(e){}
-    saveAll(base);
+    // Re-sync built-in plays whenever SEED_VER changes. First visit (empty list)
+    // just saves base. On later visits with a stale seed, drop the old built-in
+    // plays and merge the current set back in; user-created plays are kept.
+    var existing=loadAll();
+    if(!existing.length){
+      saveAll(base);
+      try{ localStorage.setItem(SEED_KEY,String(SEED_VER)); }catch(e){}
+    } else {
+      var prev=0; try{ prev=+(localStorage.getItem(SEED_KEY)||0); }catch(e){}
+      if(prev!==SEED_VER){
+        var kept=existing.filter(function(p){ return !p.seed && !SEED_NAMES[p.name]; });
+        var st={added:0,same:0,cats:{run:0,pass:0},folders:{}};
+        base.forEach(function(b){ mergeInto(kept,b,cleanPlay,st); });
+        saveAll(kept);
+        try{ localStorage.setItem(SEED_KEY,String(SEED_VER)); }catch(e){}
+      }
+    }
   })();
   applyView();
   applyBase();
